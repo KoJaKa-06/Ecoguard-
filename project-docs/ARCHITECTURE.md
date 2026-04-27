@@ -1,14 +1,14 @@
 # EcoGuard — Architecture Overview
 
-EcoGuard is split into three independently developed and deployed components.
+EcoGuard is split into three independently developed components, organized as folders inside this monorepo.
 
-## Repositories
+## Folders
 
-| Repo | Owner | Purpose | Deploys to |
+| Folder | Owner | Purpose | Deploys to |
 |------|-------|---------|------------|
-| `backend-api` | Person 1 | FastAPI service, SQLAlchemy models, JWT auth, all business logic | Railway |
-| `frontend-web` | Person 2 | React + Vite SPA, public pages, authority dashboard, bilingual i18n | Vercel |
-| `project-docs` | Person 3 | Project README, screenshots, this architecture document | GitHub Pages (optional) |
+| `backend-api/` | Person 1 (Badr) | FastAPI service, SQLAlchemy models, JWT auth, all business logic | Railway |
+| `frontend-web/` | Person 2 (Omar) | React + Vite SPA, public pages, authority dashboard, bilingual i18n | Vercel |
+| `project-docs/` | Person 3 (Hassan) | Architecture notes, screenshots, root README | — |
 
 ## Runtime topology
 
@@ -19,12 +19,12 @@ EcoGuard is split into three independently developed and deployed components.
                          │ HTTPS
                          ▼
               ┌────────────────────┐
-              │ Vercel (static SPA)│   ← frontend-web
+              │ Vercel (static SPA)│   ← frontend-web/
               └────────┬───────────┘
                        │ /api/* (CORS)
                        ▼
               ┌────────────────────┐
-              │ Railway (FastAPI)  │   ← backend-api
+              │ Railway (FastAPI)  │   ← backend-api/
               └────────┬───────────┘
                        │ asyncpg
                        ▼
