@@ -83,6 +83,7 @@ export default function ReportDetail() {
         <div className="sidebar-nav">
           <Link to="/authority">{t('dash.dashboard')}</Link>
           <a className="active">{t('dash.reports')}</a>
+          <Link to="/authority/notices">{t('notices.title')}</Link>
           <a href="#" onClick={toggleLang}>🌐 {t('nav.language')}</a>
           <a onClick={() => { localStorage.removeItem('ecoguard_token'); navigate('/login') }}>{t('dash.logout')}</a>
         </div>

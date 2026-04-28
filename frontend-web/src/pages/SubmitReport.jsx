@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
-import { fetchConfig, submitReport } from '../api'
+import { fetchConfig, submitReport, fetchPublicReports } from '../api'
 import LocationPicker from '../components/LocationPicker'
 import SceneBg from '../components/SceneBg'
 import { useLang } from '../i18n'
@@ -14,15 +14,35 @@ export default function SubmitReport() {
   const [error, setError] = useState('')
   const [result, setResult] = useState(null)
   const [submitting, setSubmitting] = useState(false)
+  const [publicCount, setPublicCount] = useState(null)
 
-  useEffect(() => { fetchConfig().then(setConfig) }, [])
+  useEffect(() => {
+    fetchConfig().then(setConfig)
+    fetchPublicReports().then(r => setPublicCount(r.length)).catch(() => {})
+  }, [])
 
   function handleChange(e) {
     setForm({ ...form, [e.target.name]: e.target.value })
   }
 
+  // Find the named region whose center coordinate is closest to the clicked point
+  function nearestLocation(lat, lng) {
+    if (!config?.location_coords) return ''
+    let best = ''
+    let bestDist = Infinity
+    for (const [name, [clat, clng]] of Object.entries(config.location_coords)) {
+      const dlat = lat - clat
+      const dlng = lng - clng
+      const d = dlat * dlat + dlng * dlng
+      if (d < bestDist) { bestDist = d; best = name }
+    }
+    return best
+  }
+
   function handleMapPick(lat, lng) {
     setCoords({ lat, lng })
+    const auto = nearestLocation(lat, lng)
+    if (auto) setForm(f => ({ ...f, location: auto }))
   }
 
   async function handleSubmit(e) {
@@ -115,10 +135,9 @@ export default function SubmitReport() {
               </div>
               <div className="form-group">
                 <label>{t('submit.locationArea')} *</label>
-                <select name="location" value={form.location} onChange={handleChange}>
-                  <option value="">{t('submit.selectArea')}</option>
-                  {config?.locations.map(l => <option key={l} value={l}>{l}</option>)}
-                </select>
+                <div style={{ padding: '0.6rem 0.75rem', borderRadius: 8, border: '1.5px solid #e2e8f0', background: '#f8fafc', fontSize: '0.9rem', color: form.location ? '#0d9488' : '#94a3b8', fontWeight: form.location ? 600 : 400 }}>
+                  {form.location || t('submit.locationAuto')}
+                </div>
               </div>
               {form.category === 'Snow Closure' && (
                 <div className="form-group">
@@ -173,23 +192,41 @@ export default function SubmitReport() {
         </div>
 
         <div className="card slide-up" style={{ alignSelf: 'flex-start', animationDelay: '0.1s' }}>
-          <h3 style={{ marginBottom: '0.75rem', fontSize: '1rem' }}>{t('submit.rules')}</h3>
-          <ul style={{ fontSize: '0.85rem', color: '#475569', display: 'flex', flexDirection: 'column', gap: '0.5rem', listStyle: 'disc', paddingLeft: '1.25rem' }}>
-            <li>{t('submit.rule1')}</li>
-            <li>{t('submit.rule2')}</li>
-            <li>{t('submit.rule3')}</li>
-            <li>{t('submit.rule4')}</li>
-            <li>{t('submit.rule5')}</li>
-            <li>{t('submit.rule6')}</li>
-          </ul>
+          <h3 style={{ marginBottom: '1.25rem', fontSize: '1rem' }}>{t('submit.process.title')}</h3>
+          <ol className="process-timeline">
+            <li className="process-step active">
+              <div className="step-icon">✏</div>
+              <div className="step-body">
+                <div className="step-title">{t('submit.process.step1.title')}</div>
+                <div className="step-desc">{t('submit.process.step1.desc')}</div>
+              </div>
+            </li>
+            <li className="process-step">
+              <div className="step-icon">🔍</div>
+              <div className="step-body">
+                <div className="step-title">{t('submit.process.step2.title')}</div>
+                <div className="step-desc">{t('submit.process.step2.desc')}</div>
+              </div>
+            </li>
+            <li className="process-step">
+              <div className="step-icon">📍</div>
+              <div className="step-body">
+                <div className="step-title">{t('submit.process.step3.title')}</div>
+                <div className="step-desc">{t('submit.process.step3.desc')}</div>
+              </div>
+            </li>
+            <li className="process-step">
+              <div className="step-icon">✓</div>
+              <div className="step-body">
+                <div className="step-title">{t('submit.process.step4.title')}</div>
+                <div className="step-desc">{t('submit.process.step4.desc')}</div>
+              </div>
+            </li>
+          </ol>
 
-          <div style={{ marginTop: '1.5rem', borderTop: '1px solid #e2e8f0', paddingTop: '1rem' }}>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem', fontSize: '0.8rem' }}>
-              <div><strong>{t('submit.category')}</strong><br />{form.category ? t(`cat.${form.category}`) : '—'}</div>
-              <div><strong>{t('submit.summary.images')}</strong><br />{images.length || t('submit.summary.optional')}</div>
-              <div><strong>{t('submit.summary.reference')}</strong><br />{t('submit.summary.generated')}</div>
-              <div><strong>{t('submit.summary.visibility')}</strong><br />{t('submit.summary.offByDefault')}</div>
-            </div>
+          <div className="community-stat">
+            <div className="big-num">{publicCount ?? '—'}</div>
+            <div className="lbl">{t('submit.process.communityLabel')}</div>
           </div>
         </div>
       </div>

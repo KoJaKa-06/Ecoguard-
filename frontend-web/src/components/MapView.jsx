@@ -10,11 +10,20 @@ const CATEGORY_COLORS = {
   Deforestation: '#22c55e',
 }
 
+const CATEGORY_ICONS = {
+  Wildfire: '🔥',
+  Pollution: '☣',
+  'Snow Closure': '❄',
+  'Illegal Dumping': '🗑',
+  'Water Contamination': '💧',
+  Deforestation: '🌲',
+}
+
 const URGENCY_SIZES = {
-  Critical: 18,
-  High: 14,
-  Medium: 11,
-  Low: 8,
+  Critical: 22,
+  High: 18,
+  Medium: 15,
+  Low: 12,
 }
 
 export default function MapView({ reports = [], selectedId, onSelect }) {
@@ -40,22 +49,37 @@ export default function MapView({ reports = [], selectedId, onSelect }) {
     reports.forEach(r => {
       if (!r.latitude || !r.longitude) return
       const color = CATEGORY_COLORS[r.category] || '#64748b'
-      const size = URGENCY_SIZES[r.urgency] || 8
+      const size = URGENCY_SIZES[r.urgency] || 12
+      const icon_glyph = CATEGORY_ICONS[r.category] || '?'
       const isSelected = r.id === selectedId
+      const isCritical = r.urgency === 'Critical'
+
+      const ringHtml = isCritical
+        ? `<span style="position:absolute;inset:-6px;border-radius:50%;border:2px solid ${color};opacity:0.6;animation:pulseRing 1.6s ease-out infinite;"></span>`
+        : ''
 
       const icon = L.divIcon({
-        className: '',
-        html: `<div style="
-          width: ${size * 2}px;
-          height: ${size * 2}px;
-          background: ${color};
-          border-radius: 50%;
-          border: ${isSelected ? '3px solid #1a1a2e' : '2px solid white'};
-          box-shadow: 0 2px 6px rgba(0,0,0,0.3);
-          opacity: 0.9;
-          transform: ${isSelected ? 'scale(1.3)' : 'scale(1)'};
-          transition: transform 0.2s;
-        "></div>`,
+        className: 'eco-marker',
+        html: `<div style="position:relative;display:inline-block;">
+          ${ringHtml}
+          <div style="
+            position: relative;
+            width: ${size * 2}px;
+            height: ${size * 2}px;
+            background: linear-gradient(135deg, ${color}, ${color}dd);
+            border-radius: 50%;
+            border: ${isSelected ? '3px solid #0f172a' : '2.5px solid white'};
+            box-shadow: ${isSelected ? '0 6px 18px rgba(0,0,0,0.45)' : '0 3px 8px rgba(0,0,0,0.3)'};
+            transform: ${isSelected ? 'scale(1.35)' : 'scale(1)'};
+            transition: transform 0.25s cubic-bezier(0.16,1,0.3,1), box-shadow 0.25s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: ${Math.max(10, size - 2)}px;
+            color: white;
+            line-height: 1;
+          ">${icon_glyph}</div>
+        </div>`,
         iconSize: [size * 2, size * 2],
         iconAnchor: [size, size],
       })

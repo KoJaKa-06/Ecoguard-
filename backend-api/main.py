@@ -240,6 +240,7 @@ def get_config():
     return {
         "categories": [c.value for c in Category],
         "locations": IFRANE_LOCATIONS,
+        "location_coords": LOCATION_COORDS,
         "verification_statuses": [v.value for v in VerificationStatus],
         "resolution_statuses": [r.value for r in ResolutionStatus],
         "urgency_levels": [u.value for u in UrgencyLevel],
@@ -524,6 +525,32 @@ def get_stats(officer=Depends(auth_required), db: Session = Depends(get_db)):
         "total": total, "pending": pending, "approved": approved, "rejected": rejected,
         "ongoing": ongoing, "in_progress": in_progress, "resolved": resolved,
     }
+
+
+class CreateNoticeRequest(BaseModel):
+    title: str
+    content: str
+
+
+@app.post("/api/authority/notices", response_model=NoticeOut)
+def create_notice(req: CreateNoticeRequest, officer=Depends(auth_required), db: Session = Depends(get_db)):
+    if not req.title.strip() or not req.content.strip():
+        raise HTTPException(status_code=400, detail="Title and content are required")
+    notice = PublicNotice(title=req.title.strip(), content=req.content.strip())
+    db.add(notice)
+    db.commit()
+    db.refresh(notice)
+    return notice
+
+
+@app.delete("/api/authority/notices/{notice_id}")
+def delete_notice(notice_id: int, officer=Depends(auth_required), db: Session = Depends(get_db)):
+    notice = db.query(PublicNotice).filter(PublicNotice.id == notice_id).first()
+    if not notice:
+        raise HTTPException(status_code=404, detail="Notice not found")
+    db.delete(notice)
+    db.commit()
+    return {"message": "Notice deleted"}
 
 
 if __name__ == "__main__":

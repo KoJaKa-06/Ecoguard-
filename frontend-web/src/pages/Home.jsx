@@ -6,6 +6,10 @@ import Legend from '../components/Legend'
 import SceneBg from '../components/SceneBg'
 import { useLang } from '../i18n'
 
+const URGENCY_RANK = { Critical: 0, High: 1, Medium: 2, Low: 3 }
+const RESOLUTION_RANK = { Ongoing: 0, 'In Progress': 1, Resolved: 2 }
+const ONE_MONTH_MS = 30 * 24 * 60 * 60 * 1000
+
 export default function Home() {
   const { t, lang } = useLang()
   const [reports, setReports] = useState([])
@@ -13,6 +17,7 @@ export default function Home() {
   const [config, setConfig] = useState(null)
   const [filters, setFilters] = useState({})
   const [selectedId, setSelectedId] = useState(null)
+  const [expandedNotesId, setExpandedNotesId] = useState(null)
   const [loaded, setLoaded] = useState(false)
 
   function formatDate(d) {
@@ -34,8 +39,30 @@ export default function Home() {
 
   function applyFilters() { fetchPublicReports(filters).then(setReports) }
 
-  const criticalHigh = reports.filter(r => r.urgency === 'Critical' || r.urgency === 'High').length
-  const resolvedCount = reports.filter(r => r.resolution === 'Resolved').length
+  const freshReports = reports.filter(r => Date.now() - new Date(r.created_at).getTime() <= ONE_MONTH_MS)
+
+  const sortedReports = [...freshReports].sort((a, b) => {
+    const ua = URGENCY_RANK[a.urgency] ?? 99
+    const ub = URGENCY_RANK[b.urgency] ?? 99
+    if (ua !== ub) return ua - ub
+    const ra = RESOLUTION_RANK[a.resolution] ?? 99
+    const rb = RESOLUTION_RANK[b.resolution] ?? 99
+    if (ra !== rb) return ra - rb
+    return new Date(b.created_at) - new Date(a.created_at)
+  })
+
+  const displayedReports = (() => {
+    if (!selectedId) return sortedReports
+    const i = sortedReports.findIndex(r => r.id === selectedId)
+    if (i <= 0) return sortedReports
+    const arr = [...sortedReports]
+    const [item] = arr.splice(i, 1)
+    arr.unshift(item)
+    return arr
+  })()
+
+  const criticalHigh = freshReports.filter(r => r.urgency === 'Critical' || r.urgency === 'High').length
+  const resolvedCount = freshReports.filter(r => r.resolution === 'Resolved').length
   const primaryImage = (r) => r.images?.find(i => i.is_primary)?.file_path || r.images?.[0]?.file_path
   const latestPublicNote = (r) => r.public_notes?.[0]?.content
 
@@ -59,7 +86,7 @@ export default function Home() {
         {[
           { n: criticalHigh, l: t('home.criticalHigh'), c: '#f59e0b' },
           { n: resolvedCount, l: t('home.resolved'), c: '#22c55e' },
-          { n: reports.length - resolvedCount, l: t('home.active'), c: '#3b82f6' },
+          { n: freshReports.length - resolvedCount, l: t('home.active'), c: '#3b82f6' },
         ].map((s, i) => (
           <div key={i} className="stat-card hover-lift">
             <div className={`stat-dot ${s.pulse ? 'pulse-dot' : ''}`} style={{ background: s.c }} />
@@ -94,7 +121,7 @@ export default function Home() {
         <div className="slide-up" style={{ animationDelay: '0.2s' }}>
           <h3 style={{ marginBottom: '0.75rem' }}>{t('home.map')}</h3>
           <div className="map-container hover-glow">
-            <MapView reports={reports} selectedId={selectedId} onSelect={setSelectedId} />
+            <MapView reports={freshReports} selectedId={selectedId} onSelect={setSelectedId} />
           </div>
           <div style={{ marginTop: '0.75rem' }}><Legend /></div>
         </div>
@@ -102,7 +129,7 @@ export default function Home() {
         <div className="slide-up" style={{ animationDelay: '0.25s' }}>
           <h3 style={{ marginBottom: '0.75rem' }}>{t('home.latestReports')}</h3>
           <div className="reports-list">
-            {reports.map((r, i) => {
+            {displayedReports.map((r, i) => {
               const img = primaryImage(r)
               const selected = selectedId === r.id
               return (
@@ -128,17 +155,33 @@ export default function Home() {
                         {r.urgency && <span className={`badge badge-urgency ${r.urgency}`}>{t(`urg.${r.urgency}`)}</span>}
                       </div>
                     </div>
-                    {selected && latestPublicNote(r) && (
+                    {selected && (r.public_notes?.length > 0) && (
                       <div className="note fade-in" style={{ marginTop: '0.5rem', padding: '0.5rem 0.75rem', background: '#f8fafc', borderRadius: '6px', borderLeft: '3px solid #0d9488', fontSize: '0.8rem' }}>
-                        {latestPublicNote(r)}
-                        {r.public_notes?.length > 1 && <div style={{ fontSize: '0.7rem', color: '#94a3b8', marginTop: '0.25rem' }}>+{r.public_notes.length - 1} {t('home.moreUpdates')}</div>}
+                        {expandedNotesId === r.id ? (
+                          r.public_notes.map((n, idx) => (
+                            <div key={n.id} style={{ marginTop: idx === 0 ? 0 : '0.5rem', paddingTop: idx === 0 ? 0 : '0.5rem', borderTop: idx === 0 ? 'none' : '1px solid #e2e8f0' }}>
+                              <div>{n.content}</div>
+                              <div style={{ fontSize: '0.65rem', color: '#94a3b8', marginTop: '0.15rem' }}>{n.author_name || ''} · {timeAgo(n.created_at)}</div>
+                            </div>
+                          ))
+                        ) : (
+                          <div>{latestPublicNote(r)}</div>
+                        )}
+                        {r.public_notes.length > 1 && (
+                          <button
+                            onClick={(e) => { e.stopPropagation(); setExpandedNotesId(expandedNotesId === r.id ? null : r.id) }}
+                            style={{ marginTop: '0.4rem', background: 'none', border: 'none', color: '#0d9488', fontSize: '0.7rem', fontWeight: 600, cursor: 'pointer', padding: 0 }}
+                          >
+                            {expandedNotesId === r.id ? t('home.showLess') : `+${r.public_notes.length - 1} ${t('home.moreUpdates')}`}
+                          </button>
+                        )}
                       </div>
                     )}
                   </div>
                 </div>
               )
             })}
-            {reports.length === 0 && (
+            {displayedReports.length === 0 && (
               <div className="card fade-in" style={{ textAlign: 'center', padding: '3rem', color: '#94a3b8' }}>
                 {t('home.noReports')}
               </div>

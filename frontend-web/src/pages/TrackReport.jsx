@@ -88,10 +88,6 @@ export default function TrackReport() {
               <div className="value">{result.reference}</div>
             </div>
             <div className="result-item">
-              <label>{t('track.visibility')}</label>
-              <div className="value">{result.is_public ? t('track.public') : t('track.notPublic')}</div>
-            </div>
-            <div className="result-item">
               <label>{t('track.urgency')}</label>
               <div className="value">
                 <span className={`badge badge-urgency ${result.urgency || 'Unassigned'}`}>

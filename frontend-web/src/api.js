@@ -83,3 +83,22 @@ export async function fetchStats() {
   if (res.status === 401) throw new Error('Unauthorized');
   return res.json();
 }
+
+export async function createNotice(title, content) {
+  const res = await fetch(`${API}/api/authority/notices`, {
+    method: 'POST',
+    headers: { ...authHeaders(), 'Content-Type': 'application/json' },
+    body: JSON.stringify({ title, content }),
+  });
+  if (!res.ok) { const err = await res.json(); throw new Error(err.detail || 'Failed to create notice'); }
+  return res.json();
+}
+
+export async function deleteNotice(id) {
+  const res = await fetch(`${API}/api/authority/notices/${id}`, {
+    method: 'DELETE',
+    headers: authHeaders(),
+  });
+  if (!res.ok) { const err = await res.json(); throw new Error(err.detail || 'Failed to delete notice'); }
+  return res.json();
+}

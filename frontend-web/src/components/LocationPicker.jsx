@@ -5,6 +5,9 @@ export default function LocationPicker({ lat, lng, onPick }) {
   const mapRef = useRef(null)
   const mapInstance = useRef(null)
   const markerRef = useRef(null)
+  const onPickRef = useRef(onPick)
+
+  useEffect(() => { onPickRef.current = onPick }, [onPick])
 
   useEffect(() => {
     if (!mapRef.current || mapInstance.current) return
@@ -14,7 +17,7 @@ export default function LocationPicker({ lat, lng, onPick }) {
     }).addTo(mapInstance.current)
 
     mapInstance.current.on('click', (e) => {
-      onPick(e.latlng.lat, e.latlng.lng)
+      onPickRef.current(e.latlng.lat, e.latlng.lng)
     })
   }, [])
 
